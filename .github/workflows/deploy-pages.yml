@@ -29,6 +29,7 @@ jobs:
         run: |
           mkdir -p site/oauth
           cp oauth/authorize.html site/oauth/authorize.html
+          cp oauth/reset-password.html site/oauth/reset-password.html
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
