@@ -21,6 +21,7 @@
       button[value="approve"] { background: #175cd3; color: #fff; }
       button[value="deny"] { background: #e7ebf2; color: #172033; }
       [role="alert"] { padding: .75rem; border-radius: .5rem; background: #fff0f0; color: #a21c1c; }
+      .recovery-link { display: inline-block; margin-top: 1rem; color: #175cd3; }
       .hidden { display: none; }
       @media (prefers-color-scheme: dark) {
         body { background: #101522; color: #f3f5fa; }
@@ -41,6 +42,7 @@
         <button name="decision" value="approve" type="submit">Approve read-only access</button>
         <button name="decision" value="deny" type="submit">Deny</button>
       </form>
+      <a id="forgot-password" class="recovery-link hidden" href="./reset-password.html">Forgot your password?</a>
       <noscript>This authorization page requires JavaScript to continue.</noscript>
     </main>
     <script>
@@ -49,6 +51,7 @@
         const form = document.getElementById("authorize-form");
         const error = document.getElementById("error");
         const description = document.getElementById("client-description");
+        const forgotPassword = document.getElementById("forgot-password");
         const endpoint = params.get("authorize_endpoint");
         const allowedAuthorizeOrigins = new Set([
           "https://idfzftlvscytcmuydbos.supabase.co",
@@ -65,14 +68,20 @@
           "code_challenge_method",
         ];
         let valid = Boolean(form);
-        if (!error || !description || !endpoint) valid = false;
+        if (!error || !description || !forgotPassword || !endpoint) valid = false;
         try {
           const endpointUrl = new URL(endpoint || "", window.location.origin);
           if (
             !allowedAuthorizeOrigins.has(endpointUrl.origin) ||
             endpointUrl.pathname !== "/functions/v1/mcp/oauth/authorize"
           ) valid = false;
-          if (valid) form.action = endpointUrl.toString();
+          if (valid) {
+            form.action = endpointUrl.toString();
+            endpointUrl.pathname = endpointUrl.pathname.replace(/\/authorize$/, "/recover");
+            const recoveryUrl = new URL("./reset-password.html", window.location.href);
+            recoveryUrl.searchParams.set("recovery_endpoint", endpointUrl.toString());
+            forgotPassword.href = recoveryUrl.toString();
+          }
         } catch {
           valid = false;
         }
@@ -106,7 +115,10 @@
           error.textContent = message;
           error.classList.remove("hidden");
         }
-        if (valid) form.classList.remove("hidden");
+        if (valid) {
+          form.classList.remove("hidden");
+          forgotPassword.classList.remove("hidden");
+        }
         else if (!message) {
           error.textContent = "This authorization request is invalid or expired.";
           error.classList.remove("hidden");
