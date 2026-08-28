@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; form-action 'self' https://idfzftlvscytcmuydbos.supabase.co"
+    />
+    <title>Authorize fantasy sports</title>
+    <style>
+      :root { color-scheme: light dark; font-family: system-ui, sans-serif; }
+      body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #f5f7fb; color: #172033; }
+      main { width: min(28rem, calc(100% - 2rem)); padding: 2rem; border: 1px solid #d9dfeb; border-radius: 1rem; background: #fff; box-shadow: 0 1rem 3rem rgb(23 32 51 / 12%); }
+      h1 { margin-top: 0; font-size: 1.5rem; }
+      p { line-height: 1.5; }
+      label { display: block; margin: 1rem 0; font-weight: 600; }
+      input[type="email"], input[type="password"] { box-sizing: border-box; display: block; width: 100%; margin-top: .4rem; padding: .7rem; border: 1px solid #aeb8ca; border-radius: .5rem; font: inherit; }
+      button { margin: .35rem .5rem 0 0; padding: .7rem 1rem; border: 0; border-radius: .5rem; font: inherit; font-weight: 700; cursor: pointer; }
+      button[value="approve"] { background: #175cd3; color: #fff; }
+      button[value="deny"] { background: #e7ebf2; color: #172033; }
+      [role="alert"] { padding: .75rem; border-radius: .5rem; background: #fff0f0; color: #a21c1c; }
+      .hidden { display: none; }
+      @media (prefers-color-scheme: dark) {
+        body { background: #101522; color: #f3f5fa; }
+        main { border-color: #34405a; background: #182033; }
+        input[type="email"], input[type="password"] { border-color: #53617d; background: #101522; color: #f3f5fa; }
+        button[value="deny"] { background: #34405a; color: #f3f5fa; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Authorize fantasy sports</h1>
+      <p id="client-description">This client requests read-only fantasy league data.</p>
+      <p id="error" class="hidden" role="alert"></p>
+      <form id="authorize-form" class="hidden" method="post">
+        <label>Email <input name="email" type="email" autocomplete="username" required="required" /></label>
+        <label>Password <input name="password" type="password" autocomplete="current-password" required="required" /></label>
+        <button name="decision" value="approve" type="submit">Approve read-only access</button>
+        <button name="decision" value="deny" type="submit">Deny</button>
+      </form>
+      <noscript>This authorization page requires JavaScript to continue.</noscript>
+    </main>
+    <script>
+      (() => {
+        const params = new URLSearchParams(window.location.search);
+        const form = document.getElementById("authorize-form");
+        const error = document.getElementById("error");
+        const description = document.getElementById("client-description");
+        const endpoint = params.get("authorize_endpoint");
+        const allowedAuthorizeOrigins = new Set([
+          "https://idfzftlvscytcmuydbos.supabase.co",
+          "http://127.0.0.1:54321",
+          "http://localhost:54321",
+        ]);
+        const required = [
+          "oauth_request",
+          "client_id",
+          "redirect_uri",
+          "response_type",
+          "scope",
+          "code_challenge",
+          "code_challenge_method",
+        ];
+        let valid = Boolean(form);
+        if (!error || !description || !endpoint) valid = false;
+        try {
+          const endpointUrl = new URL(endpoint || "", window.location.origin);
+          if (
+            !allowedAuthorizeOrigins.has(endpointUrl.origin) ||
+            endpointUrl.pathname !== "/functions/v1/mcp/oauth/authorize"
+          ) valid = false;
+          if (valid) form.action = endpointUrl.toString();
+        } catch {
+          valid = false;
+        }
+        for (const name of required) {
+          const value = params.get(name);
+          if (!value) valid = false;
+          if (valid) {
+            const input = document.createElement("input");
+            input.type = "hidden";
+            input.name = name;
+            input.value = value;
+            form.appendChild(input);
+          }
+        }
+        for (const name of ["state", "resource"]) {
+          const value = params.get(name);
+          if (valid) {
+            if (value) {
+              const input = document.createElement("input");
+              input.type = "hidden";
+              input.name = name;
+              input.value = value;
+              form.appendChild(input);
+            }
+          }
+        }
+        const clientName = params.get("client_name");
+        if (clientName) description.textContent = `${clientName} requests read-only fantasy league data.`;
+        const message = params.get("error");
+        if (message) {
+          error.textContent = message;
+          error.classList.remove("hidden");
+        }
+        if (valid) form.classList.remove("hidden");
+        else if (!message) {
+          error.textContent = "This authorization request is invalid or expired.";
+          error.classList.remove("hidden");
+        }
+      })();
+    </script>
+  </body>
+</html>
